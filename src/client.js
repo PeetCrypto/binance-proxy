@@ -10,6 +10,23 @@ class Client {
         this.client = new Binance().options();
         this.subscribed = [];
         this.klines = {};
+	this.debug = true;
+        this.limiter = false;
+        this.floodProtect = []
+    }
+
+    setDebug(value) {
+	console.log('### setDebug # ' + value + ' #');
+        this.debug = value == false ? false : true;
+    }
+
+    FloodProtectOff(symbol) {
+	if(this.debug) console.log('floodProtectOff', symbol)
+        this.floodProtect.splice(this.floodProtect.indexOf(symbol),1);
+    }
+    FloodProtectOn(symbol) {
+        if(this.debug) console.log('floodProtectOn', symbol)
+        this.floodProtect.push(symbol);
     }
 
     subscribe(symbol, interval) {
@@ -44,6 +61,7 @@ class Client {
         }
     }
     async getCandles(symbol, interval) {
+	let debug = this.debug;
         let data = this.klines[symbol + interval];
         if (!data) {
             this.subscribe(symbol, interval);
@@ -53,7 +71,26 @@ class Client {
             }
         }
         if (!data[data.length - 1] || data[data.length - 1][6] <= Date.now()) {
-            return fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}`).then(resp => resp.json());
+            if(this.limiter == false) this.limiter = Date.now();
+
+	    let since_last = Date.now() - this.limiter;
+            if(since_last > 500) {
+                    if(debug) console.log('[0] now:' + Date.now() + ' this.limiter' + this.limiter + ' since_last: ' + since_last);
+                    this.limiter = Date.now();
+	            return fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}`).then(resp => resp.json());
+            } else {
+                 if(this.floodProtect.indexOf(symbol) == -1) {
+		    this.FloodProtectOn(symbol);
+                    this.limiter = this.limiter + 500;
+	            let flood_protect = (since_last * -1)  + 500;
+		    await new Promise(resolve => setTimeout(resolve, flood_protect));
+              	    if(debug) console.log('[x] now:' + Date.now() + ' this.limiter: ' + this.limiter + ' flood protect: ' + flood_protect);
+		    this.FloodProtectOff(symbol);
+                    return fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}`).then(resp => resp.json());
+
+		}
+                    //this.limiter = Date.now() + flood_protect;
+            }
         }
         return this.klines[symbol + interval];
     }
