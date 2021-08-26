@@ -12,12 +12,18 @@ class Client {
         this.klines = {};
 	this.debug = true;
         this.limiter = false;
+        this.floodRate = 50;
         this.floodProtect = []
     }
 
     setDebug(value) {
 	console.log('### setDebug # ' + value + ' #');
         this.debug = value == false ? false : true;
+    }
+
+    setFloodRate(value) {
+        console.log('### setFloodRate # ' + value + ' #');
+        this.floodRate = value;
     }
 
     FloodProtectOff(symbol) {
@@ -74,15 +80,15 @@ class Client {
             if(this.limiter == false) this.limiter = Date.now();
 
 	    let since_last = Date.now() - this.limiter;
-            if(since_last > 500) {
+            if(since_last > this.floodRate) {
                     if(debug) console.log('[0] now:' + Date.now() + ' this.limiter' + this.limiter + ' since_last: ' + since_last);
                     this.limiter = Date.now();
 	            return fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}`).then(resp => resp.json());
             } else {
                  if(this.floodProtect.indexOf(symbol) == -1) {
 		    this.FloodProtectOn(symbol);
-                    this.limiter = this.limiter + 500;
-	            let flood_protect = (since_last * -1)  + 500;
+                    this.limiter = this.limiter + this.floodRate;
+	            let flood_protect = (since_last * -1)  + this.floodRate;
 		    await new Promise(resolve => setTimeout(resolve, flood_protect));
               	    if(debug) console.log('[x] now:' + Date.now() + ' this.limiter: ' + this.limiter + ' flood protect: ' + flood_protect);
 		    this.FloodProtectOff(symbol);

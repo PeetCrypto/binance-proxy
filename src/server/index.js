@@ -4,10 +4,10 @@ import compression from "compression";
 import { Router } from "express";
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
-const NodeRateLimiter = require('node-rate-limiter');
-const nodeRateLimiter = new NodeRateLimiter();
+//const NodeRateLimiter = require('node-rate-limiter');
+//const nodeRateLimiter = new NodeRateLimiter();
 
-
+/*
 const routeLimiter = async (proxyReq: http.ClientRequest, req: http.IncomingMessage): void {
   const requestBody = (req as Request).body;
 
@@ -30,15 +30,17 @@ const routeLimiter = async (proxyReq: http.ClientRequest, req: http.IncomingMess
     writeBody(querystring.stringify(requestBody));
   }
 }
+*/
 
 const getServer = async (client) => {
     const app = express();
     const router = new Router();
+/*
     const speedLimiter = slowDown({
 	windowMs: 1 * 60 * 1000,  // 1 minute
         delayAfter: 100
     });
-
+*/
     app.use(cors());
     app.use(compression());
     app.use(express.json());
@@ -56,7 +58,8 @@ const getServer = async (client) => {
     });
 
     router.use(createProxyMiddleware({
-        target: 'https://api.binance.com', changeOrigin: true, onProxyReq: routeLimiter
+       /*  target: 'https://api.binance.com', changeOrigin: true, onProxyReq: routeLimiter*/
+        target: 'https://api.binance.com', changeOrigin: true
     }));
 
     app.use("/", router);
